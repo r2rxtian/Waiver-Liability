@@ -1,0 +1,15 @@
+.route-guard {
+    width: min(430px, calc(100% - 32px));
+    border: 1px solid #d9d7cd;
+    border-radius: 16px;
+    padding: 28px;
+    background: #fffdf8;
+    color: #1e2923;
+    box-shadow: 0 24px 70px rgba(45, 57, 48, .2);
+}
+.route-guard::backdrop { background: rgba(24, 32, 27, .42); backdrop-filter: blur(3px); }
+.route-guard h2 { font: 700 22px Manrope, sans-serif; margin: 14px 0 7px; }
+.route-guard p { color: #68736c; line-height: 1.55; margin: 0; }
+.route-guard-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #fff0d8; color: #96611c; font: 700 21px Manrope, sans-serif; }
+.route-guard-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px; }
+.route-guard-actions .btn { min-width: 105px; }
