@@ -5,6 +5,8 @@ require_login();
 $id=(int)($_GET['id']??0);
 $w=one("SELECT w.*,e.employee_number,e.full_name employee_name,e.position,d.department_name,t.type_name,v.version_number,es.printed_name employee_printed,es.signature_data employee_signature,es.signed_at employee_signed_at,ss.printed_name supervisor_printed,ss.signature_data supervisor_signature,ss.signed_at supervisor_signed_at FROM dbo.acd_mw_waivers w JOIN dbo.acd_mw_employees e ON e.employee_id=w.employee_id LEFT JOIN dbo.acd_mw_departments d ON d.department_id=e.department_id JOIN dbo.acd_mw_waiver_types t ON t.waiver_type_id=w.waiver_type_id JOIN dbo.acd_mw_waiver_versions v ON v.waiver_version_id=w.waiver_version_id OUTER APPLY(SELECT TOP 1 * FROM dbo.acd_mw_waiver_signatures WHERE waiver_id=w.waiver_id AND signer_type='EMPLOYEE')es OUTER APPLY(SELECT TOP 1 * FROM dbo.acd_mw_waiver_signatures WHERE waiver_id=w.waiver_id AND signer_type='SUPERVISOR')ss WHERE w.waiver_id=?",[$id]);
 if(!$w)exit('Waiver not found.');
+if(user()['role_name']==='EMPLOYEE'&&(int)(user()['employee_id']??0)!==(int)$w['employee_id']){http_response_code(403);exit('Access denied.');}
+if($w['status']!=='COMPLETED'||empty($w['employee_signature'])||empty($w['supervisor_signature'])||empty($w['finalized_at'])||empty($w['document_hash'])){http_response_code(422);exit('Only completed waivers can be printed.');}
 $acks=all('SELECT acknowledgment_text FROM dbo.acd_mw_waiver_acknowledgments WHERE waiver_id=? ORDER BY display_order',[$id]);
 audit('PRINT_WAIVER','WAIVER',$id,'Formal waiver opened for printing');
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><title><?=e($w['waiver_number'])?> — Waiver of Liability</title><style>

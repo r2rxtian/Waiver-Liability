@@ -7,6 +7,31 @@ document.querySelectorAll('[data-signature]').forEach(canvas=>{const ctx=canvas.
  canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',end);clear?.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);input.value=''});
 });
 
+// The existing review form now starts the secure phone-signing workflow.
+document.querySelectorAll('form input[name="action"][value="review"]').forEach(input=>{
+ const button=input.form?.querySelector('button[type="submit"],button:not([type])');
+ if(button)button.textContent='Request Employee Signature';
+});
+
+// Poll the authenticated status endpoint while a one-time QR is active.
+document.querySelectorAll('[data-signing-waiting]').forEach(panel=>{
+ const waiverId=panel.dataset.waiverId,expiresAt=Date.now()+Number(panel.dataset.secondsRemaining||0)*1000,countdown=panel.querySelector('[data-signing-countdown]');
+ let stopped=false,lastSeconds=null;
+ const showSigned=data=>{
+  stopped=true;
+  const canSupervise=panel.dataset.canSupervise==='1';
+  panel.classList.add('signed-state');panel.removeAttribute('data-signing-waiting');
+  panel.innerHTML='<div class="signed-icon">&#10003;</div><div class="signed-copy"><p class="signing-kicker">Employee signature</p><h2>Employee signed</h2><p data-signed-name></p><img data-signed-image alt="Employee signature"><dl><div><dt>Signed</dt><dd data-signed-at></dd></div><div><dt>Verification</dt><dd>Company credentials</dd></div></dl><div class="next-step"><b>Next step</b><span>Supervisor acknowledgment required</span><a class="btn" data-next-action></a></div></div>';
+  panel.querySelector('[data-signed-name]').textContent=data.printed_name||'Employee';
+  panel.querySelector('[data-signed-at]').textContent=(data.signed_at||'Recorded').replace(/\.\d+$/,'');
+  const image=panel.querySelector('[data-signed-image]');if(typeof data.signature_data==='string'&&data.signature_data.startsWith('data:image/png;base64,'))image.src=data.signature_data;
+  const next=panel.querySelector('[data-next-action]');next.href=canSupervise?`index.php?page=approval-sign&id=${encodeURIComponent(waiverId)}`:`index.php?page=waiver-view&id=${encodeURIComponent(waiverId)}`;next.textContent=canSupervise?'Review for Supervisor':'View signed waiver';if(!canSupervise)next.classList.add('secondary');
+ };
+ const tick=()=>{if(stopped)return;const seconds=Math.max(0,Math.floor((expiresAt-Date.now())/1000));if(seconds!==lastSeconds&&countdown){countdown.textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;lastSeconds=seconds}if(seconds<=0){stopped=true;location.reload()}};
+ const poll=async()=>{if(stopped)return;try{const response=await fetch(`/Waiver-Liability/api/waivers/check-signature-status.php?waiver_id=${encodeURIComponent(waiverId)}`,{credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});if(response.status===401){stopped=true;location.href='index.php?page=login';return}if(!response.ok)return;const data=await response.json();if(data.signed){showSigned(data);return}if(data.request_status&&data.request_status!=='ACTIVE'){stopped=true;location.reload()}}catch(error){/* Keep waiting through short network interruptions. */}};
+ tick();poll();const clock=setInterval(tick,1000),watch=setInterval(poll,2500);window.addEventListener('pagehide',()=>{clearInterval(clock);clearInterval(watch)},{once:true});
+});
+
 // Protect active waiver sessions. Saved DRAFT and employee-signature states
 // remain resumable from the waiver register.
 const waiverSession=document.querySelector('[data-waiver-session]');

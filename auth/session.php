@@ -39,7 +39,12 @@ function next_number(string $prefix, string $table, string $column): string {
     return sprintf('%s-%s-%06d',$prefix,$year,((int)$row['n'])+1);
 }
 function post(string $key, string $default=''): string { return trim((string)($_POST[$key] ?? $default)); }
-function signature_valid(string $data): bool { return str_starts_with($data,'data:image/png;base64,') && strlen($data)>500; }
+function signature_valid(string $data): bool {
+    if (function_exists('signing_signature_valid')) return signing_signature_valid($data);
+    if (!str_starts_with($data,'data:image/png;base64,') || strlen($data)<600 || strlen($data)>1500000) return false;
+    $binary=base64_decode(substr($data,22),true);
+    return $binary!==false && strlen($binary)>=300 && str_starts_with($binary,"\x89PNG\r\n\x1a\n");
+}
 
 set_exception_handler(function(Throwable $e): void {
     error_log($e->__toString()); http_response_code(500);

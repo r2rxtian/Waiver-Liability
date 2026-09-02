@@ -88,7 +88,49 @@ IF NOT EXISTS(SELECT 1 FROM dbo.acd_mw_users WHERE username='test.supervisor')
 IF NOT EXISTS(SELECT 1 FROM dbo.acd_mw_users WHERE username='test.employee')
  INSERT dbo.acd_mw_users(username,password_hash,full_name,email,role_id,employee_id,is_active,created_at) VALUES('test.employee',@password_hash,N'Juan Dela Cruz','test.employee@la-rose-noire.com',@employee_role,(SELECT employee_id FROM dbo.acd_mw_employees WHERE employee_number='EMP-00218'),1,SYSDATETIME());
 
+/*
+  Give every ACTIVE fake employee a dedicated mobile-verification account.
+  The mobile screen still uses employee_number (Biometrics Number), not the
+  username. Updating existing sample accounts makes this block safe to rerun
+  and restores the documented test password if test data became inconsistent.
+*/
+DECLARE @SampleEmployeeAccounts TABLE(employee_number VARCHAR(30),username VARCHAR(80));
+INSERT @SampleEmployeeAccounts(employee_number,username) VALUES
+('EMP-00218','employee.00218'),
+('EMP-00241','employee.00241'),
+('EMP-00307','employee.00307'),
+('EMP-00319','employee.00319'),
+('EMP-00342','employee.00342'),
+('EMP-00365','employee.00365'),
+('EMP-00388','employee.00388'),
+('EMP-00402','employee.00402'),
+('EMP-00426','employee.00426'),
+('EMP-00451','employee.00451'),
+('EMP-00473','employee.00473');
+
+UPDATE u
+SET u.password_hash=@password_hash,
+    u.full_name=e.full_name,
+    u.email=e.email,
+    u.role_id=@employee_role,
+    u.employee_id=e.employee_id,
+    u.is_active=1,
+    u.updated_at=SYSDATETIME()
+FROM dbo.acd_mw_users u
+JOIN @SampleEmployeeAccounts a ON a.username=u.username
+JOIN dbo.acd_mw_employees e ON e.employee_number=a.employee_number AND e.is_active=1;
+
+INSERT dbo.acd_mw_users(username,password_hash,full_name,email,role_id,employee_id,is_active,created_at)
+SELECT a.username,@password_hash,e.full_name,e.email,@employee_role,e.employee_id,1,SYSDATETIME()
+FROM @SampleEmployeeAccounts a
+JOIN dbo.acd_mw_employees e ON e.employee_number=a.employee_number AND e.is_active=1
+WHERE NOT EXISTS(SELECT 1 FROM dbo.acd_mw_users u WHERE u.username=a.username);
+
 COMMIT TRANSACTION;
 
 SELECT employee_number,full_name,position,is_active FROM dbo.acd_mw_employees WHERE employee_number LIKE 'EMP-00%' ORDER BY employee_number;
-SELECT username,full_name,is_active FROM dbo.acd_mw_users WHERE username LIKE 'test.%' ORDER BY username;
+SELECT e.employee_number,u.username,u.full_name,u.is_active
+FROM dbo.acd_mw_users u
+JOIN dbo.acd_mw_employees e ON e.employee_id=u.employee_id
+WHERE u.username LIKE 'employee.%'
+ORDER BY e.employee_number;

@@ -1,18 +1,31 @@
-# Carepath Medical Waivers
+# Waiver Desk
 
 Internal PHP 8 + Microsoft SQL Server application focused on creating, signing, finalizing, and retaining employee liability waivers.
 
 ## Setup
 
-1. Confirm PHP has `pdo_sqlsrv` enabled. The app reuses `../QRS_new/conn/db.php`; credentials are not copied into this project.
+1. Confirm PHP has `pdo_sqlsrv` enabled. The app reuses `../QRS_new/conn/config.php`; credentials are not copied into this project.
 2. Review and run `sql/schema.sql` against `LRNPH_OJT`, then run `sql/seed.sql`. Both scripts are idempotent and touch only `dbo.acd_mw_*` tables. They contain no foreign keys.
-3. Create the first account from a terminal:
+3. For an existing installation, run `sql/add_signing_workflow.sql` once. It creates only `dbo.acd_mw_signing_tokens` when missing, adds no foreign keys, and refuses to alter an incompatible existing token table.
+4. Create the first account from a terminal:
 
    `php scripts/create-user.php admin "a-strong-password" "System Administrator" "SYSTEM ADMIN"`
 
-4. Add departments and employees to the project-prefixed tables, then open `/Waiver-Liability/`.
+5. Add departments and employees to the project-prefixed tables, then open `/Waiver-Liability/`.
 
 The seeded waiver wording is transcribed from the supplied La Rose Noire paper form.
+
+## Secure mobile signing
+
+Authorized staff review a draft and select **Request Employee Signature**. The system stores only the SHA-256 hash of a random one-time token and displays the raw token only inside the temporary mobile URL/QR. The default lifetime is 10 minutes. Active requests can be cancelled, and expired or used QR links cannot be reused.
+
+In **Settings**, set `APP_BASE_URL` to an HTTP or HTTPS address phones can reach on the company network, for example `http://10.2.0.25/Waiver-Liability`. Do not use `localhost` for cross-device testing. The employee verifies with their `employee_number` (shown as Biometrics Number) and the password of the active user account linked to that same `employee_id`. This verification is scoped to the signing token and does not grant access to the admin application.
+
+After the employee confirms, the desktop waiting panel polls the authenticated status endpoint every 2.5 seconds and updates automatically. A supervisor then signs through normal application authentication. Finalization and both signature saves are transactional, completed records are read-only, and PDF export is available only after both signatures and the document hash exist.
+
+The local QR renderer is the MIT-licensed `GlobusStudio/phpQRcode`; formal A4 exports use the PHP-only FPDF library. Neither workflow requires Node.js or an external form service.
+
+Run `php scripts/signing-schema-audit.php` after the migration to list the live project tables, columns, row counts, foreign keys, and employee-linked signing accounts. The audit is read-only and never prints password hashes or raw signing tokens.
 
 ## Revision note
 
