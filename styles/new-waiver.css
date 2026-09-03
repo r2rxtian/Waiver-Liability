@@ -1,0 +1,105 @@
+/* Focused six-step waiver workspace. The rest of the application keeps the
+   shared shell and typography; these rules only activate on the wizard. */
+body.page-new-waiver{background:#fbfcfa;color:#15271e}
+.page-new-waiver .sidebar{display:none}
+.page-new-waiver .shell{display:block;min-height:100dvh}
+.page-new-waiver .topbar{height:101px;padding:20px 3.2vw;border-bottom:1px solid #e3e7e1;background:#fff;gap:16px}
+.page-new-waiver .topbar-brand{display:flex;align-items:center;gap:14px}
+.page-new-waiver .topbar-brand strong{display:block;font:700 16px Manrope;color:#143e2b}
+.page-new-waiver .topbar-brand small{display:block;margin-top:2px;color:#6c7970;font-size:12px}
+.page-new-waiver .topbar-brand>div{display:none}
+.page-new-waiver .topbar-title{display:block}
+.page-new-waiver .topbar-title h1{margin:2px 0 0;font:700 25px/1.1 Manrope;letter-spacing:-.025em;color:#15291f}
+.page-new-waiver .topbar-brand .brand-mark{width:44px;height:44px;border-radius:11px;font-size:23px}
+.page-new-waiver .top-user{font-size:14px;color:#23362d}
+.page-new-waiver .content{max-width:1600px;padding:25px 2.55vw 42px}
+.page-new-waiver .steps{max-width:1180px;margin:0 auto 35px;padding:0 8px;gap:0}
+.page-new-waiver .steps:before{left:7%;right:7%;top:17px;height:1px;background:#cdd5ce}
+.page-new-waiver .step{min-width:90px;color:#737d76}
+.page-new-waiver .step span{width:36px;height:36px;font-size:15px;background:#fff;border:1px solid #ccd4cd}
+.page-new-waiver .step small{margin-top:9px;font-size:13px;letter-spacing:0;color:#707b73}
+.page-new-waiver .step.done span,.page-new-waiver .step.current span{background:#187b4a;border-color:#187b4a;color:#fff}
+.page-new-waiver .step.done small,.page-new-waiver .step.current small{color:#173b29;font-weight:700}
+.page-new-waiver .step.current span{box-shadow:0 0 0 4px #e5f1e6}
+.new-waiver-page{max-width:1510px;margin:0 auto}
+.wizard-layout{display:grid;grid-template-columns:minmax(0,1.95fr) minmax(340px,.95fr);gap:24px;align-items:stretch}
+.wizard-layout-employee{grid-template-columns:minmax(0,1.85fr) minmax(360px,.9fr)}
+.wizard-panel{min-width:0;background:#fff;border:1px solid #d9dfd9;border-radius:14px;padding:26px;box-shadow:0 7px 25px rgba(32,57,41,.035)}
+.wizard-panel h2{margin:0;color:#14291f;font:700 24px/1.2 Manrope;letter-spacing:-.025em}
+.wizard-panel-heading{margin-bottom:20px}.wizard-panel-heading p:not(.wizard-kicker){margin:7px 0 0;color:#657169;font-size:16px}
+.wizard-kicker{text-transform:uppercase;letter-spacing:.12em;color:#1b7045!important;font-size:11px!important;font-weight:800;margin:0 0 6px!important}
+.employee-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;margin-bottom:16px}
+.wizard-search,.wizard-select{position:relative;display:block}.wizard-search>span{position:absolute;left:14px;top:8px;color:#63736a;font-size:26px;line-height:1;pointer-events:none}.wizard-search input{padding-left:42px}
+.employee-toolbar input,.employee-toolbar select{height:54px;border-radius:10px;font-size:15px}
+.wizard-employee-results{gap:0;margin:0}.wizard-employee-results .employee-choice{border-width:1px 0 0;border-radius:0;padding:13px 2px;min-height:70px;transition:background .2s,border-color .2s}.wizard-employee-results .employee-choice:last-child{border-bottom:1px solid var(--line)}
+.wizard-employee-results .employee-choice:has(input:checked){border:1px solid #28764d;border-radius:10px;background:#f4faf2;padding:12px 12px;margin:0 -12px}
+.wizard-employee-results .employee-choice input{width:22px;height:22px;accent-color:#187b4a}
+.employee-avatar{width:48px;height:48px;border-radius:50%;font-size:16px;background:#e4efdf}.employee-choice-copy b{font-size:15px;color:#173025}.employee-choice-copy small{font-size:14px;color:#68756d;margin-top:4px}
+.employee-choice em{font-size:13px;color:#1d7146}.employee-choice:has(input:checked) em{font-weight:700}.employee-choice:has(input:not(:checked)) em{font-size:0}.employee-choice:has(input:checked) em:after{content:'Selected';font-size:12px;padding:5px 8px;border:1px solid #c6dfc1;border-radius:6px;background:#edf6e9}
+.wizard-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:24px;padding-top:17px;border-top:1px solid #e0e5e0}.wizard-actions{display:flex;align-items:center;gap:10px;margin-left:auto}.wizard-footer .btn{min-height:48px;padding:12px 19px}.wizard-footer .btn span{font-size:20px;line-height:0;margin-left:10px}.wizard-footer .btn[disabled]{background:#e5e8e6;color:#a0aaa3;cursor:not-allowed;transform:none}
+.results-count{font-size:13px;color:#69766e}.selected-employee-panel,.employee-summary{padding:27px 29px}.selected-employee-panel>h2,.employee-summary>h2{font-size:20px}.selected-employee-empty{text-align:center;margin:auto;padding:80px 22px;color:#6d786f}.selected-employee-symbol{display:grid;place-items:center;width:148px;height:148px;border-radius:50%;margin:0 auto 27px;background:#eaf3e4;color:#197649;font-size:68px}.selected-employee-empty h3{margin:0 0 8px;font:700 23px Manrope;color:#183025}.selected-employee-empty p{margin:0;font-size:15px}.summary-identity{display:flex;align-items:center;gap:16px;margin:27px 0 24px;padding-bottom:24px;border-bottom:1px solid #dce3dc}.summary-identity .avatar{width:62px;height:62px;border-radius:50%;font-size:23px}.summary-identity h3{margin:0;font:700 18px Manrope}.summary-identity p{margin:5px 0;color:#69766e;font-size:15px}.active-chip,.status-chip{display:inline-block;padding:5px 8px;border-radius:6px;background:#eaf3e6;color:#267448;font-size:12px;font-weight:700}.employee-summary dl{display:grid;gap:21px;margin:0}.employee-summary dl div{display:grid;grid-template-columns:120px 1fr;gap:12px}.employee-summary dt{color:#66746b;font-size:14px}.employee-summary dd{margin:0;color:#20342a;font-size:14px;font-weight:600}.summary-note{display:flex;gap:12px;margin-top:28px;padding:17px;border:1px solid #d5e3d1;border-radius:11px;background:#f3f8ef;color:#225b3b;font-size:15px;line-height:1.5}.summary-link{display:inline-block;margin-top:24px;color:#1d7045;font-weight:700}
+.employee-pagination{display:flex;align-items:center;gap:5px;margin-left:auto}.employee-pagination>span{display:flex;gap:5px}.page-button{display:inline-grid;place-items:center;min-width:38px;height:38px;border:1px solid #d5ddd5;border-radius:8px;background:#fff;color:#23412e;font:600 14px 'DM Sans';cursor:pointer}.page-button:hover:not(:disabled),.page-button.active{border-color:#2b7b4d;background:#edf6eb;color:#176c42}.page-button:disabled{opacity:.45;cursor:not-allowed}.review-confirm{display:flex;align-items:flex-start;gap:10px;margin-right:auto;color:#3d5145;font-size:14px;line-height:1.4;cursor:pointer}.review-confirm input{flex:none;width:19px;height:19px;accent-color:#1b7949}
+.wizard-type-grid{gap:25px;margin:27px 0}.wizard-type-grid .type-card{min-height:340px;padding:30px 34px;border-radius:15px;border-color:#d3dbd4}.wizard-type-grid .type-card:has(input:checked){border:2px solid #2c7e51;box-shadow:0 0 0 3px #eaf4e7;background:#fbfdf9}.wizard-type-grid .type-card input{width:25px;height:25px;accent-color:#187b4a}.wizard-type-grid .type-icon{width:54px;height:54px;border-radius:13px;background:#f0f6eb;font-size:31px}.wizard-type-grid .type-card b{margin:25px 0 10px;font-size:21px}.wizard-type-grid .type-card p{font-size:17px;line-height:1.5;color:#47564d;max-width:34ch}.wizard-type-grid .type-card small{display:block;padding-top:20px;margin-top:20px;border-top:1px solid #dfe5df;font-size:15px;line-height:1.5;color:#4b5c51}
+.inline-heading{display:flex;justify-content:space-between;align-items:start}.details-panel{padding:27px 28px}.wizard-form{gap:18px}.wizard-form .field label{font-size:14px}.wizard-form input,.wizard-form select,.wizard-form textarea{border-radius:10px;padding:14px;font-size:15px}.wizard-form textarea{min-height:112px}.field-help{margin:-1px 0 6px;color:#6e7b73;font-size:13px}.required-mark{color:#be3d32}.optional-mark{display:inline-block;margin-left:6px;padding:3px 6px;border-radius:5px;background:#edf3ea;color:#66766b;font-size:11px;font-weight:600}.review-panel{padding:23px 25px}.review-panel .legal-document{width:100%;margin:16px 0 0;padding:22px 26px;box-shadow:none;border-color:#d9e0da;border-radius:10px}.review-panel .legal-document header{padding-bottom:14px}.review-panel .legal-document h2{font-size:22px}.review-panel .legal-document section{padding:14px 0}.review-panel .legal-document h4{margin-bottom:9px}.review-panel .waiver-copy{line-height:1.55}.review-footer{margin-top:18px}.review-summary{align-self:start}.review-summary h2{font-size:21px}.summary-checks{display:grid;gap:16px;margin:26px 0;padding-bottom:24px;border-bottom:1px solid #dce3dc}.summary-checks p{margin:0;color:#214b31;font-size:15px}.summary-note b{display:block}.summary-note p{margin:4px 0 0;color:#63736a}.review-summary .summary-note{display:block}.review-summary .summary-note:before{content:'▧';display:block;margin-bottom:10px;font-size:25px}.page-new-waiver .status-chip{background:#fff4da;color:#7e571e}
+.page-new-waiver .employee-signing-panel{max-width:1250px;margin:0 auto;padding:28px;border-radius:14px;background:#fff;border-color:#d9dfd9}.page-new-waiver .signing-panel-heading h2{font:700 26px Manrope}.page-new-waiver .qr-waiting-grid{grid-template-columns:minmax(270px,330px) 1fr;gap:32px}.page-new-waiver .signing-panel-heading{padding-bottom:20px;border-bottom:1px solid #e0e6e0}.page-new-waiver .sign-panel{max-width:850px}
+.signing-step-intro{max-width:1250px;margin:0 auto 18px;display:flex;align-items:end;justify-content:space-between;gap:20px}.signing-step-intro h2{margin:0;font:700 28px Manrope;letter-spacing:-.03em}.signing-step-intro p:not(.wizard-kicker){margin:7px 0 0;color:#657169;font-size:16px}.signing-link-row{display:flex;gap:9px;align-items:center;margin-top:16px}.signing-link-row input{min-width:0;flex:1;background:#fbfdfb;font-size:13px}.signing-link-row button{flex:none;padding:12px 15px;border:1px solid #a9c9b0;border-radius:9px;background:#fff;color:#267247;font-weight:700;cursor:pointer}.signing-link-row button:hover{background:#edf7eb}
+.page-new-waiver .completion{max-width:800px;margin:15px auto}
+@media(max-width:900px){.wizard-layout,.wizard-layout-employee{grid-template-columns:1fr}.selected-employee-panel,.employee-summary{min-height:300px}.selected-employee-empty{padding:45px 22px}.employee-toolbar{grid-template-columns:1fr 190px}}
+@media(max-width:650px){.page-new-waiver .topbar{height:78px;padding:13px 18px}.page-new-waiver .topbar-brand .brand-mark{width:38px;height:38px}.page-new-waiver .top-user span:not(.avatar){display:none}.page-new-waiver .content{padding:18px 12px 30px}.page-new-waiver .steps{overflow:auto;justify-content:flex-start;gap:18px;margin-bottom:24px;padding-bottom:2px}.page-new-waiver .steps:before{display:none}.page-new-waiver .step{min-width:68px}.page-new-waiver .step small{font-size:11px}.wizard-panel{padding:19px}.wizard-panel h2{font-size:21px}.employee-toolbar{grid-template-columns:1fr}.wizard-type-grid{grid-template-columns:1fr;gap:14px}.wizard-type-grid .type-card{min-height:0;padding:22px}.wizard-type-grid .type-card b{margin-top:15px}.wizard-footer{align-items:stretch;flex-direction:column}.wizard-actions{width:100%;margin-left:0}.wizard-actions .btn{flex:1}.review-footer .btn{width:100%}.page-new-waiver .qr-waiting-grid{grid-template-columns:1fr}.page-new-waiver .qr-frame{max-width:330px;margin:auto}.employee-pagination{margin:0;justify-content:center}.signing-step-intro{align-items:flex-start;flex-direction:column}.signing-step-intro h2{font-size:24px}.signing-link-row{align-items:stretch;flex-direction:column}}
+.review-summary .summary-note:before{content:'+'}
+
+/* The option cards use one inline SVG family rather than text glyphs. Keeping
+   the icon dimensions here makes the illustrations optically consistent even
+   when their paths have different shapes. */
+.workflow-option-svg{display:block;width:38px;height:38px;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.auth-field-icon svg{display:block;width:20px;height:20px;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wizard-type-grid .type-icon{display:grid;place-items:center}
+.wizard-type-grid .type-icon .workflow-option-svg{width:42px;height:42px}
+.selected-employee-symbol .workflow-option-svg{width:82px;height:82px;stroke-width:1.8}
+
+/* Desktop wizard viewport lock. This only applies when there is enough room
+   for the reference layout. Short, narrow, or zoomed viewports retain normal
+   document flow so every control remains reachable. */
+@media screen and (min-width:1100px) and (min-height:760px){
+ body.page-new-waiver{height:100dvh;overflow:hidden}
+ .page-new-waiver .shell{height:100dvh;min-height:0;overflow:hidden}
+ .page-new-waiver main{height:100dvh;min-height:0;overflow:hidden}
+ .page-new-waiver .content{height:calc(100dvh - 101px);min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:clamp(16px,2.2vh,25px) 2.55vw clamp(16px,2.4vh,30px)}
+ .page-new-waiver .steps{flex:0 0 auto;margin-bottom:clamp(18px,3.2vh,35px)}
+ .page-new-waiver .new-waiver-page{height:auto;min-height:0;flex:1 1 auto;display:flex;flex-direction:column}
+ .page-new-waiver .wizard-layout{height:100%;min-height:0}
+ .page-new-waiver .wizard-panel{min-height:0;display:flex;flex-direction:column}
+ .page-new-waiver .employee-picker-panel form{min-height:0;display:flex;flex:1;flex-direction:column}
+ .page-new-waiver .employee-results{min-height:0;flex:1;overflow:hidden}
+ .page-new-waiver .selected-employee-empty{padding:clamp(28px,7vh,80px) 22px}
+ .page-new-waiver .type-picker-panel form,.page-new-waiver .details-panel form{min-height:0;display:flex;flex-direction:column}
+ .page-new-waiver .wizard-type-grid{min-height:0;flex:1;margin-top:clamp(16px,2.8vh,27px)}
+ .page-new-waiver .wizard-type-grid .type-card{min-height:0}
+ .page-new-waiver .review-panel{overflow:hidden}
+ .page-new-waiver .review-panel .legal-document{min-height:0;flex:1;overflow:hidden}
+ .page-new-waiver .signing-step-page{min-height:0}
+ .page-new-waiver .signing-step-intro{flex:0 0 auto}
+ .page-new-waiver .employee-signing-panel{min-height:0;flex:1;overflow:hidden}
+}
+
+@media screen and (min-width:1100px) and (min-height:760px) and (max-height:840px){
+ .page-new-waiver .topbar{height:88px;padding-top:14px;padding-bottom:14px}
+ .page-new-waiver .content{height:calc(100dvh - 88px);padding-top:14px;padding-bottom:16px}
+ .page-new-waiver .steps{margin-bottom:18px}
+ .page-new-waiver .step span{width:32px;height:32px}
+ .page-new-waiver .step small{margin-top:6px;font-size:12px}
+ .page-new-waiver .wizard-panel{padding:20px 22px}
+ .page-new-waiver .wizard-panel h2{font-size:22px}
+ .page-new-waiver .wizard-panel-heading{margin-bottom:14px}
+ .page-new-waiver .wizard-panel-heading p:not(.wizard-kicker){font-size:14px}
+ .page-new-waiver .employee-toolbar input,.page-new-waiver .employee-toolbar select{height:48px}
+ .page-new-waiver .wizard-employee-results .employee-choice{min-height:58px;padding-top:8px;padding-bottom:8px}
+ .page-new-waiver .employee-avatar{width:40px;height:40px}
+ .page-new-waiver .wizard-type-grid .type-card{padding:22px 25px}
+ .page-new-waiver .wizard-type-grid .type-card b{margin:16px 0 7px;font-size:19px}
+ .page-new-waiver .wizard-type-grid .type-card p{font-size:15px}
+ .page-new-waiver .wizard-type-grid .type-card small{padding-top:14px;margin-top:14px;font-size:13px}
+ .page-new-waiver .wizard-form{gap:12px}
+ .page-new-waiver .wizard-form input,.page-new-waiver .wizard-form select,.page-new-waiver .wizard-form textarea{padding:11px;font-size:14px}
+ .page-new-waiver .wizard-form textarea{min-height:82px}
+}

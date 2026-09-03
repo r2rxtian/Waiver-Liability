@@ -1,16 +1,31 @@
 document.querySelector('.menu')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));
 document.querySelectorAll('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{if(!confirm(el.dataset.confirm))e.preventDefault()}));
+document.querySelectorAll('[data-copy-signing-link]').forEach(button=>button.addEventListener('click',async()=>{const input=button.closest('.signing-link-row')?.querySelector('[data-signing-link]');if(!input)return;try{await navigator.clipboard.writeText(input.value)}catch(error){input.select();document.execCommand('copy');}const original=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=original,1400)}));
 document.querySelector('#search')?.addEventListener('input',e=>document.querySelectorAll('[data-filter] tbody tr').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(e.target.value.toLowerCase())));
+
+// Replace the basic employee filter with a six-row page model and exact range text.
+const pagedEmployeePicker=document.querySelector('[data-employee-results]');
+if(pagedEmployeePicker){
+ const employeeRows=[...pagedEmployeePicker.querySelectorAll('[data-employee-row]')],employeeSearch=document.querySelector('[data-employee-search]'),departmentFilter=document.querySelector('[data-department-filter]'),rangeLabel=document.querySelector('[data-employee-count]'),continueButton=document.querySelector('[data-employee-continue]'),summaryPanel=document.querySelector('[data-selected-employee-panel]'),pageSize=6;let currentPage=1,matchingRows=employeeRows.slice();
+ const setSummary=(row)=>{if(!summaryPanel)return;const get=selector=>summaryPanel.querySelector(selector);summaryPanel.innerHTML='<h2>Selected employee</h2><div class="summary-identity"><span class="avatar"></span><div><h3></h3><p></p><span class="active-chip">✓ Active</span></div></div><dl><div><dt>Department</dt><dd></dd></div><div><dt>Position</dt><dd></dd></div><div><dt>Email</dt><dd></dd></div></dl><div class="summary-note">ⓘ <span>The waiver will be linked to this employee’s record.</span></div>';get('.avatar').textContent=(row.dataset.employeeName||'E').slice(0,1).toUpperCase();get('h3').textContent=row.dataset.employeeName||'';get('.summary-identity p').textContent=row.dataset.employeeNumber||'';get('dl div:nth-child(1) dd').textContent=row.dataset.employeeDepartment||'Not provided';get('dl div:nth-child(2) dd').textContent=row.dataset.employeePosition||'Not provided';get('dl div:nth-child(3) dd').textContent=row.dataset.employeeEmail||'Not provided';employeeRows.forEach(item=>item.classList.toggle('is-selected',item===row));continueButton?.removeAttribute('disabled')};
+ const pagination=document.querySelector('[data-employee-pagination]');const previous=pagination?.querySelector('[data-employee-prev]');const pageNumbers=pagination?.querySelector('[data-employee-pages]');const following=pagination?.querySelector('[data-employee-next]');
+ const renderEmployees=()=>{const totalPages=Math.max(1,Math.ceil(matchingRows.length/pageSize));currentPage=Math.min(currentPage,totalPages);employeeRows.forEach(row=>row.hidden=true);matchingRows.slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(row=>row.hidden=false);const first=matchingRows.length?(currentPage-1)*pageSize+1:0,last=Math.min(currentPage*pageSize,matchingRows.length);if(rangeLabel)rangeLabel.textContent=`Showing ${first}–${last} of ${matchingRows.length} employees`;pageNumbers.replaceChildren();for(let n=1;n<=totalPages;n++){const button=document.createElement('button');button.type='button';button.className='page-button'+(n===currentPage?' active':'');button.textContent=String(n);button.addEventListener('click',()=>{currentPage=n;renderEmployees()});pageNumbers.append(button)}previous.disabled=currentPage===1;following.disabled=currentPage===totalPages};
+ employeeRows.forEach(row=>{row.addEventListener('click',()=>setSummary(row));row.querySelector('input')?.addEventListener('change',()=>setSummary(row))});const applyEmployeeFilter=()=>{const query=(employeeSearch?.value||'').trim().toLowerCase(),department=departmentFilter?.value||'';matchingRows=employeeRows.filter(row=>(!query||row.dataset.employeeText.includes(query))&&(!department||row.dataset.department===department));currentPage=1;renderEmployees()};employeeSearch?.addEventListener('input',applyEmployeeFilter);departmentFilter?.addEventListener('change',applyEmployeeFilter);previous?.addEventListener('click',()=>{if(currentPage>1){currentPage--;renderEmployees()}});following?.addEventListener('click',()=>{if(currentPage<Math.ceil(matchingRows.length/pageSize)){currentPage++;renderEmployees()}});renderEmployees();
+}
+
+// Step 2 and review confirmations remain unavailable until the required
+// selection is made, even when browser validation is bypassed.
+const typeForm=document.querySelector('[data-type-form]');if(typeForm){const button=typeForm.querySelector('button[type="submit"]');const radios=[...typeForm.querySelectorAll('input[name="waiver_type"]')];if(button){button.disabled=true;radios.forEach(radio=>radio.addEventListener('change',()=>{button.disabled=!radios.some(item=>item.checked)}))}}
+const reviewForm=document.querySelector('form input[name="action"][value="review"]')?.form;if(reviewForm){const button=reviewForm.querySelector('button[type="submit"],button:not([type])');const label=reviewForm.querySelector('.review-confirm')||document.createElement('label');if(!label.parentElement){label.className='review-confirm';label.innerHTML='<input type="checkbox" name="review_confirm" value="1" data-review-confirm> <span>I have reviewed the information and confirm it is correct.</span>';button?.parentElement?.insertBefore(label,button)}if(button){const confirmInput=label.querySelector('input[name="review_confirm"]');button.disabled=!confirmInput?.checked;confirmInput?.addEventListener('change',event=>{button.disabled=!event.target.checked})}}
+
+// Preserve the current draft when returning from review to the details form.
+const wizardStep=document.querySelector('[data-new-waiver-step]')?.dataset.newWaiverStep;if(wizardStep==='4'){const id=new URLSearchParams(location.search).get('id');const back=document.querySelector('.review-footer a[href*="step=3"]');if(back&&id)back.href=`index.php?page=new-waiver&step=3&id=${encodeURIComponent(id)}`}
+if(wizardStep==='3'){const id=new URLSearchParams(location.search).get('id'),form=document.querySelector('.wizard-form');if(form&&id){const hidden=document.createElement('input');hidden.type='hidden';hidden.name='waiver_id';hidden.value=id;form.append(hidden)}}
+
 document.querySelectorAll('[data-signature]').forEach(canvas=>{const ctx=canvas.getContext('2d'), input=document.getElementById(canvas.dataset.signature), clear=canvas.parentElement.querySelector('[data-clear]'); let drawing=false,last=null;
  const point=e=>{const r=canvas.getBoundingClientRect(),t=e.touches?.[0]||e;return [(t.clientX-r.left)*canvas.width/r.width,(t.clientY-r.top)*canvas.height/r.height]};
  const start=e=>{drawing=true;last=point(e);e.preventDefault()}, move=e=>{if(!drawing)return;const p=point(e);ctx.strokeStyle='#244c38';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();last=p;input.value=canvas.toDataURL('image/png');e.preventDefault()},end=()=>drawing=false;
  canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',end);clear?.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);input.value=''});
-});
-
-// The existing review form now starts the secure phone-signing workflow.
-document.querySelectorAll('form input[name="action"][value="review"]').forEach(input=>{
- const button=input.form?.querySelector('button[type="submit"],button:not([type])');
- if(button)button.textContent='Request Employee Signature';
 });
 
 // Poll the authenticated status endpoint while a one-time QR is active.
@@ -20,7 +35,7 @@ document.querySelectorAll('[data-signing-waiting]').forEach(panel=>{
  const showSigned=data=>{
   stopped=true;
   const canSupervise=panel.dataset.canSupervise==='1';
-  panel.classList.add('signed-state');panel.removeAttribute('data-signing-waiting');
+  panel.classList.add('signed-state');panel.dataset.signingState='signed';panel.removeAttribute('data-signing-waiting');
   panel.innerHTML='<div class="signed-icon">&#10003;</div><div class="signed-copy"><p class="signing-kicker">Employee signature</p><h2>Employee signed</h2><p data-signed-name></p><img data-signed-image alt="Employee signature"><dl><div><dt>Signed</dt><dd data-signed-at></dd></div><div><dt>Verification</dt><dd>Company credentials</dd></div></dl><div class="next-step"><b>Next step</b><span>Supervisor acknowledgment required</span><a class="btn" data-next-action></a></div></div>';
   panel.querySelector('[data-signed-name]').textContent=data.printed_name||'Employee';
   panel.querySelector('[data-signed-at]').textContent=(data.signed_at||'Recorded').replace(/\.\d+$/,'');
@@ -43,8 +58,8 @@ if(waiverSession){
  document.body.appendChild(dialog);
  document.querySelectorAll('form').forEach(form=>form.addEventListener('submit',()=>{allowNavigation=true}));
  window.addEventListener('beforeunload',event=>{if(allowNavigation)return;event.preventDefault();event.returnValue=''});
- document.querySelectorAll('.sidebar a').forEach(link=>link.addEventListener('click',event=>{
-  if(allowNavigation||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+ document.querySelectorAll('.sidebar a, .topbar a, a[data-leave-workflow]').forEach(link=>link.addEventListener('click',event=>{
+  if(allowNavigation||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||link.closest('.new-waiver-page'))return;
   event.preventDefault();pendingUrl=link.href;
   if(typeof dialog.showModal==='function')dialog.showModal();
   else if(window.confirm('All progress will be lost if you leave this active waiver session.')){allowNavigation=true;location.href=pendingUrl}

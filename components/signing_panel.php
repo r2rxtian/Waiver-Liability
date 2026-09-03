@@ -12,7 +12,7 @@ function employee_signing_panel(array $waiver): void
         unset($_SESSION['signing_request_tokens'][$waiverId]);
         $verification = one("SELECT TOP 1 verification_method,verified_at FROM dbo.acd_mw_signing_tokens WHERE waiver_id=? AND status='USED' ORDER BY used_at DESC,token_id DESC", [$waiverId]);
         ?>
-        <section class="card employee-signing-panel signed-state">
+        <section class="card employee-signing-panel signed-state" data-signing-state="signed">
             <div class="signed-icon">&#10003;</div>
             <div class="signed-copy">
                 <p class="signing-kicker">Employee signature</p>
@@ -43,7 +43,7 @@ function employee_signing_panel(array $waiver): void
         && hash_equals((string)$token['token_hash'], hash('sha256', (string)($request['raw_token'] ?? '')));
     $active = $token && $token['status'] === 'ACTIVE' && (int)($token['seconds_remaining'] ?? 0) > 0;
     ?>
-    <section class="card employee-signing-panel"<?php if ($active && $hasRaw): ?> data-signing-waiting data-waiver-id="<?=$waiverId?>" data-seconds-remaining="<?=e(max(0,(int)$token['seconds_remaining']))?>" data-can-supervise="<?=in_array(user()['role_name'], SIGNING_SUPERVISOR_ROLES, true) ? '1' : '0'?>"<?php endif ?>>
+    <section class="card employee-signing-panel" data-signing-state="<?=e($active && $hasRaw ? 'waiting' : 'idle')?>"<?php if ($active && $hasRaw): ?> data-signing-waiting data-waiver-id="<?=$waiverId?>" data-seconds-remaining="<?=e(max(0,(int)$token['seconds_remaining']))?>" data-can-supervise="<?=in_array(user()['role_name'], SIGNING_SUPERVISOR_ROLES, true) ? '1' : '0'?>"<?php endif ?>>
         <div class="signing-panel-heading">
             <div><p class="signing-kicker">Employee signature</p><h2><?=($active && $hasRaw) ? 'Waiting for employee' : 'Not requested'?></h2><p><?=($active && $hasRaw) ? 'Scan this QR code using the employee\'s phone to review and sign.' : 'Create a secure, one-time mobile signing session when the employee is ready.'?></p></div>
             <span class="request-status <?=e(strtolower((string)($token['status'] ?? 'not-requested')))?>"><?=e(str_replace('_', ' ', (string)($token['status'] ?? 'NOT REQUESTED')))?></span>
@@ -55,6 +55,7 @@ function employee_signing_panel(array $waiver): void
                     <b><?=e($waiver['employee_name'])?></b><span><?=e($waiver['employee_number'])?></span>
                     <div class="waiting-pulse"><i></i>Waiting for employee signature...</div>
                     <p>Expires in <strong data-signing-countdown>--:--</strong></p>
+                    <div class="signing-link-row"><input type="text" readonly value="<?=e($request['url'])?>" data-signing-link aria-label="Secure signing link"><button type="button" data-copy-signing-link>Copy link</button></div>
                     <?php if (signing_is_local_url((string)$request['url'])): ?><div class="network-warning">No private LAN address could be detected. Set <b>APP_BASE_URL</b> in Settings, then generate a new QR.</div><?php endif ?>
                     <form method="post"><?=csrf_field()?><input type="hidden" name="action" value="cancel_signing_request"><input type="hidden" name="waiver_id" value="<?=$waiverId?>"><button class="btn secondary" data-confirm="Cancel this signing request? The QR will stop working immediately.">Cancel Signing Request</button></form>
                 </div>
