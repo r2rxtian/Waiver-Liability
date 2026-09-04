@@ -1,72 +1,584 @@
 document.querySelector('.menu')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));
-document.querySelectorAll('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{if(!confirm(el.dataset.confirm))e.preventDefault()}));
-document.querySelectorAll('[data-copy-signing-link]').forEach(button=>button.addEventListener('click',async()=>{const input=button.closest('.signing-link-row')?.querySelector('[data-signing-link]');if(!input)return;try{await navigator.clipboard.writeText(input.value)}catch(error){input.select();document.execCommand('copy');}const original=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=original,1400)}));
+
+// Auto-open server-generated modal dialogs (replacing banner alerts)
+document.querySelectorAll('dialog[data-auto-open]').forEach(dialog=>{
+    if(typeof dialog.showModal==='function')dialog.showModal();
+});
+
+// Universal modal dialog for confirmations (replacing native window.confirm)
+const confirmModal=document.createElement('dialog');
+confirmModal.className='app-modal confirm-modal';
+confirmModal.innerHTML=`
+    <div class="app-modal-icon confirm">?</div>
+    <h2>Confirm action</h2>
+    <p data-modal-message></p>
+    <div class="app-modal-actions">
+        <button type="button" class="btn secondary" data-modal-cancel>Cancel</button>
+        <button type="button" class="btn danger" data-modal-confirm>Confirm</button>
+    </div>
+`;
+document.body.appendChild(confirmModal);
+let pendingConfirmAction=null;
+let allowWaiverNavigation=false;
+window.bypassNavigationGuard=()=>{allowWaiverNavigation=true};
+
+document.querySelectorAll('[data-confirm]').forEach(element=>{
+    element.addEventListener('click',event=>{
+        event.preventDefault();
+        const message=element.dataset.confirm||'Are you sure you want to proceed?';
+        confirmModal.querySelector('[data-modal-message]').textContent=message;
+        pendingConfirmAction=()=>{
+            allowWaiverNavigation=true;
+            if(element.tagName==='BUTTON'&&element.form){
+                element.form.submit();
+            }else if(element.tagName==='A'&&element.href){
+                location.href=element.href;
+            }else if(element.closest('form')){
+                element.closest('form').submit();
+            }
+        };
+        if(typeof confirmModal.showModal==='function'){
+            confirmModal.showModal();
+        }else if(pendingConfirmAction){
+            pendingConfirmAction();
+        }
+    });
+});
+
+confirmModal.querySelector('[data-modal-cancel]').addEventListener('click',()=>{
+    confirmModal.close();
+    pendingConfirmAction=null;
+});
+
+confirmModal.querySelector('[data-modal-confirm]').addEventListener('click',()=>{
+    confirmModal.close();
+    if(pendingConfirmAction){
+        const action=pendingConfirmAction;
+        pendingConfirmAction=null;
+        action();
+    }
+});
+
+document.querySelectorAll('[data-copy-signing-link]').forEach(button=>button.addEventListener('click',async()=>{const input=button.closest('.signing-link-row, .secure-link-row')?.querySelector('[data-signing-link]');if(!input)return;try{await navigator.clipboard.writeText(input.value)}catch(error){input.select();document.execCommand('copy');}const original=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=original,1400)}));
 document.querySelector('#search')?.addEventListener('input',e=>document.querySelectorAll('[data-filter] tbody tr').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(e.target.value.toLowerCase())));
 
-// Replace the basic employee filter with a six-row page model and exact range text.
+// Step 1: Six-row employee pagination, search, department filter, and dynamic summary card
 const pagedEmployeePicker=document.querySelector('[data-employee-results]');
 if(pagedEmployeePicker){
- const employeeRows=[...pagedEmployeePicker.querySelectorAll('[data-employee-row]')],employeeSearch=document.querySelector('[data-employee-search]'),departmentFilter=document.querySelector('[data-department-filter]'),rangeLabel=document.querySelector('[data-employee-count]'),continueButton=document.querySelector('[data-employee-continue]'),summaryPanel=document.querySelector('[data-selected-employee-panel]'),pageSize=6;let currentPage=1,matchingRows=employeeRows.slice();
- const setSummary=(row)=>{if(!summaryPanel)return;const get=selector=>summaryPanel.querySelector(selector);summaryPanel.innerHTML='<h2>Selected employee</h2><div class="summary-identity"><span class="avatar"></span><div><h3></h3><p></p><span class="active-chip">✓ Active</span></div></div><dl><div><dt>Department</dt><dd></dd></div><div><dt>Position</dt><dd></dd></div><div><dt>Email</dt><dd></dd></div></dl><div class="summary-note">ⓘ <span>The waiver will be linked to this employee’s record.</span></div>';get('.avatar').textContent=(row.dataset.employeeName||'E').slice(0,1).toUpperCase();get('h3').textContent=row.dataset.employeeName||'';get('.summary-identity p').textContent=row.dataset.employeeNumber||'';get('dl div:nth-child(1) dd').textContent=row.dataset.employeeDepartment||'Not provided';get('dl div:nth-child(2) dd').textContent=row.dataset.employeePosition||'Not provided';get('dl div:nth-child(3) dd').textContent=row.dataset.employeeEmail||'Not provided';employeeRows.forEach(item=>item.classList.toggle('is-selected',item===row));continueButton?.removeAttribute('disabled')};
- const pagination=document.querySelector('[data-employee-pagination]');const previous=pagination?.querySelector('[data-employee-prev]');const pageNumbers=pagination?.querySelector('[data-employee-pages]');const following=pagination?.querySelector('[data-employee-next]');
- const renderEmployees=()=>{const totalPages=Math.max(1,Math.ceil(matchingRows.length/pageSize));currentPage=Math.min(currentPage,totalPages);employeeRows.forEach(row=>row.hidden=true);matchingRows.slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(row=>row.hidden=false);const first=matchingRows.length?(currentPage-1)*pageSize+1:0,last=Math.min(currentPage*pageSize,matchingRows.length);if(rangeLabel)rangeLabel.textContent=`Showing ${first}–${last} of ${matchingRows.length} employees`;pageNumbers.replaceChildren();for(let n=1;n<=totalPages;n++){const button=document.createElement('button');button.type='button';button.className='page-button'+(n===currentPage?' active':'');button.textContent=String(n);button.addEventListener('click',()=>{currentPage=n;renderEmployees()});pageNumbers.append(button)}previous.disabled=currentPage===1;following.disabled=currentPage===totalPages};
- employeeRows.forEach(row=>{row.addEventListener('click',()=>setSummary(row));row.querySelector('input')?.addEventListener('change',()=>setSummary(row))});const applyEmployeeFilter=()=>{const query=(employeeSearch?.value||'').trim().toLowerCase(),department=departmentFilter?.value||'';matchingRows=employeeRows.filter(row=>(!query||row.dataset.employeeText.includes(query))&&(!department||row.dataset.department===department));currentPage=1;renderEmployees()};employeeSearch?.addEventListener('input',applyEmployeeFilter);departmentFilter?.addEventListener('change',applyEmployeeFilter);previous?.addEventListener('click',()=>{if(currentPage>1){currentPage--;renderEmployees()}});following?.addEventListener('click',()=>{if(currentPage<Math.ceil(matchingRows.length/pageSize)){currentPage++;renderEmployees()}});renderEmployees();
+    const employeeRows=[...pagedEmployeePicker.querySelectorAll('[data-employee-row]')];
+    const employeeSearch=document.querySelector('[data-employee-search]');
+    const departmentFilter=document.querySelector('[data-department-filter]');
+    const rangeLabel=document.querySelector('[data-employee-count]');
+    const summaryPanel=document.querySelector('[data-selected-employee-panel]');
+    const pageSize=6;
+    let currentPage=1, matchingRows=employeeRows.slice();
+
+    const infoSvg='<svg class="w-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+
+    const setSummary=(row)=>{
+        if(!summaryPanel)return;
+        const empId=row.dataset.employeeId;
+        const empName=row.dataset.employeeName||'';
+        const empNumber=row.dataset.employeeNumber||'';
+        const empDept=row.dataset.employeeDepartment||'Quality Assurance';
+        const empPos=row.dataset.employeePosition||'Quality Inspector';
+        const empEmail=row.dataset.employeeEmail||(empName.toLowerCase().replace(/[^a-z]/g,'.')+'@company.com');
+        const initial=empName.slice(0,1).toUpperCase()||'E';
+
+        summaryPanel.innerHTML=`
+            <h2>Selected employee</h2>
+            <div class="selected-employee-card">
+                <div class="summary-identity">
+                    <span class="avatar employee-avatar">${initial}</span>
+                    <div class="summary-name-col">
+                        <h3>${empName}</h3>
+                        <div class="summary-sub-row">
+                            <span class="emp-num">${empNumber}</span>
+                            <span class="active-chip">Active</span>
+                        </div>
+                    </div>
+                </div>
+                <dl class="summary-details-list">
+                    <div><dt>Department</dt><dd>${empDept}</dd></div>
+                    <div><dt>Position</dt><dd>${empPos}</dd></div>
+                    <div><dt>Email</dt><dd>${empEmail}</dd></div>
+                </dl>
+                <div class="summary-note">
+                    <span class="note-icon">${infoSvg}</span>
+                    <span>The waiver will be linked to this employee's record.</span>
+                </div>
+            </div>
+        `;
+
+        // Enable universal footer continue button and update hint
+        const footerContinue = document.querySelector('[data-employee-continue]');
+        if (footerContinue) {
+            footerContinue.disabled = false;
+        }
+        const footerHint = document.querySelector('[data-step1-hint]');
+        if (footerHint) {
+            footerHint.textContent = `Selected: ${empName} (${empNumber})`;
+        }
+
+        employeeRows.forEach(item=>{
+            const isThis=item===row;
+            item.classList.toggle('is-selected',isThis);
+            const r=item.querySelector('input');
+            if(r)r.checked=isThis;
+        });
+    };
+
+    // Universal footer button submission for Step 1
+    const footerContinueBtn = document.querySelector('[data-employee-continue]');
+    footerContinueBtn?.addEventListener('click', () => {
+        allowWaiverNavigation = true;
+        const form = document.querySelector('[data-employee-form]');
+        form?.submit();
+    });
+
+    const pagination=document.querySelector('[data-employee-pagination]');
+    const previous=pagination?.querySelector('[data-employee-prev]');
+    const pageNumbers=pagination?.querySelector('[data-employee-pages]');
+    const following=pagination?.querySelector('[data-employee-next]');
+
+    const renderEmployees=()=>{
+        const totalPages=Math.max(1,Math.ceil(matchingRows.length/pageSize));
+        currentPage=Math.min(currentPage,totalPages);
+        employeeRows.forEach(row=>{
+            row.hidden=true;
+            row.classList.add('is-hidden');
+            row.style.setProperty('display','none','important');
+        });
+        matchingRows.slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(row=>{
+            row.hidden=false;
+            row.classList.remove('is-hidden');
+            row.style.setProperty('display','flex','important');
+        });
+        const first=matchingRows.length?(currentPage-1)*pageSize+1:0;
+        const last=Math.min(currentPage*pageSize,matchingRows.length);
+        if(rangeLabel)rangeLabel.textContent=`Showing ${first}–${last} of ${matchingRows.length} employees`;
+        if(pageNumbers){
+            pageNumbers.replaceChildren();
+            for(let n=1;n<=totalPages;n++){
+                const button=document.createElement('button');
+                button.type='button';
+                button.className='page-button'+(n===currentPage?' active':'');
+                button.textContent=String(n);
+                button.addEventListener('click',()=>{currentPage=n;renderEmployees()});
+                pageNumbers.append(button);
+            }
+        }
+        if(previous)previous.disabled=currentPage===1;
+        if(following)following.disabled=currentPage===totalPages;
+    };
+
+    employeeRows.forEach(row=>{
+        row.addEventListener('click',()=>setSummary(row));
+        row.querySelector('input')?.addEventListener('change',()=>setSummary(row));
+    });
+
+    const applyEmployeeFilter=()=>{
+        const query=(employeeSearch?.value||'').trim().toLowerCase();
+        const department=departmentFilter?.value||'';
+        matchingRows=employeeRows.filter(row=>(!query||row.dataset.employeeText.includes(query))&&(!department||row.dataset.department===department));
+        currentPage=1;
+        renderEmployees();
+    };
+
+    employeeSearch?.addEventListener('input',applyEmployeeFilter);
+    departmentFilter?.addEventListener('change',applyEmployeeFilter);
+    previous?.addEventListener('click',()=>{if(currentPage>1){currentPage--;renderEmployees()}});
+    following?.addEventListener('click',()=>{if(currentPage<Math.ceil(matchingRows.length/pageSize)){currentPage++;renderEmployees()}});
+    renderEmployees();
 }
 
-// Step 2 and review confirmations remain unavailable until the required
-// selection is made, even when browser validation is bypassed.
-const typeForm=document.querySelector('[data-type-form]');if(typeForm){const button=typeForm.querySelector('button[type="submit"]');const radios=[...typeForm.querySelectorAll('input[name="waiver_type"]')];if(button){button.disabled=true;radios.forEach(radio=>radio.addEventListener('change',()=>{button.disabled=!radios.some(item=>item.checked)}))}}
-const reviewForm=document.querySelector('form input[name="action"][value="review"]')?.form;if(reviewForm){const button=reviewForm.querySelector('button[type="submit"],button:not([type])');const label=reviewForm.querySelector('.review-confirm')||document.createElement('label');if(!label.parentElement){label.className='review-confirm';label.innerHTML='<input type="checkbox" name="review_confirm" value="1" data-review-confirm> <span>I have reviewed the information and confirm it is correct.</span>';button?.parentElement?.insertBefore(label,button)}if(button){const confirmInput=label.querySelector('input[name="review_confirm"]');button.disabled=!confirmInput?.checked;confirmInput?.addEventListener('change',event=>{button.disabled=!event.target.checked})}}
+// Step 2: Waiver type card selection and button state
+const typeForm=document.querySelector('[data-type-form]');
+if(typeForm){
+    const continueBtn=document.querySelector('[data-type-continue]');
+    const typeHint=document.querySelector('[data-type-hint]');
+    const typeCards=typeForm.querySelectorAll('[data-type-card]');
 
-// Preserve the current draft when returning from review to the details form.
-const wizardStep=document.querySelector('[data-new-waiver-step]')?.dataset.newWaiverStep;if(wizardStep==='4'){const id=new URLSearchParams(location.search).get('id');const back=document.querySelector('.review-footer a[href*="step=3"]');if(back&&id)back.href=`index.php?page=new-waiver&step=3&id=${encodeURIComponent(id)}`}
-if(wizardStep==='3'){const id=new URLSearchParams(location.search).get('id'),form=document.querySelector('.wizard-form');if(form&&id){const hidden=document.createElement('input');hidden.type='hidden';hidden.name='waiver_id';hidden.value=id;form.append(hidden)}}
+    typeCards.forEach(card=>{
+        card.addEventListener('click',()=>{
+            const radio=card.querySelector('input[type="radio"]');
+            if(radio)radio.checked=true;
+            typeCards.forEach(c=>c.classList.toggle('is-selected',c===card));
+            if(continueBtn)continueBtn.disabled=false;
+            if(typeHint){
+                const label=card.querySelector('b')?.textContent||'Waiver type';
+                typeHint.textContent=`Selected: ${label}`;
+            }
+        });
+    });
 
-document.querySelectorAll('[data-signature]').forEach(canvas=>{const ctx=canvas.getContext('2d'), input=document.getElementById(canvas.dataset.signature), clear=canvas.parentElement.querySelector('[data-clear]'); let drawing=false,last=null;
- const point=e=>{const r=canvas.getBoundingClientRect(),t=e.touches?.[0]||e;return [(t.clientX-r.left)*canvas.width/r.width,(t.clientY-r.top)*canvas.height/r.height]};
- const start=e=>{drawing=true;last=point(e);e.preventDefault()}, move=e=>{if(!drawing)return;const p=point(e);ctx.strokeStyle='#244c38';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();last=p;input.value=canvas.toDataURL('image/png');e.preventDefault()},end=()=>drawing=false;
- canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',end);clear?.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);input.value=''});
+    continueBtn?.addEventListener('click', () => {
+        allowWaiverNavigation = true;
+        typeForm.submit();
+    });
+}
+
+// Step 3: Character counter for medical recommendation
+const recField=document.getElementById('recommendation-text');
+const recCounter=document.getElementById('recommendation-counter');
+if(recField&&recCounter){
+    const updateRecCount=()=>{
+        const len=recField.value.length;
+        recCounter.textContent=`${len.toLocaleString()} / 1,000`;
+        if(len>=950){
+            recCounter.style.color='#d93829';
+            recCounter.style.fontWeight='700';
+        }else{
+            recCounter.style.color='';
+            recCounter.style.fontWeight='';
+        }
+    };
+    recField.addEventListener('input',updateRecCount);
+    updateRecCount();
+}
+
+// Step 4: Review confirmation checkbox enables continue button
+const reviewCheckbox=document.querySelector('[data-review-checkbox]');
+const reviewSubmitBtn=document.querySelector('[data-review-submit]');
+const reviewHint=document.querySelector('[data-review-hint]');
+if(reviewCheckbox&&reviewSubmitBtn){
+    reviewCheckbox.addEventListener('change',()=>{
+        reviewSubmitBtn.disabled=!reviewCheckbox.checked;
+        if(reviewHint){
+            reviewHint.textContent=reviewCheckbox.checked
+                ? 'Ready to continue to employee signature'
+                : 'Please confirm the review checkbox to proceed';
+        }
+    });
+}
+
+// Universal A4 Document Preview Modal
+function closeA4PreviewModal() {
+    const dialog = document.getElementById('a4-preview-dialog');
+    if (!dialog) return;
+    const iframe = dialog.querySelector('.a4-preview-iframe');
+    if (iframe) iframe.src = 'about:blank';
+    try {
+        if (typeof dialog.close === 'function' && dialog.open) {
+            dialog.close();
+        }
+    } catch (_) {}
+    dialog.removeAttribute('open');
+    dialog.style.setProperty('display', 'none', 'important');
+}
+
+function openA4PreviewModal(url) {
+    let dialog = document.getElementById('a4-preview-dialog');
+    if (!dialog) {
+        dialog = document.createElement('dialog');
+        dialog.id = 'a4-preview-dialog';
+        dialog.className = 'app-modal a4-preview-dialog';
+        dialog.innerHTML = `
+            <div class="a4-modal-header">
+                <div class="a4-modal-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <b>A4 Document Preview</b>
+                </div>
+                <div class="a4-modal-actions">
+                    <button type="button" class="btn btn-sm btn-print-a4" data-print-a4>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Print
+                    </button>
+                    <a class="btn secondary btn-sm" data-a4-external target="_blank" href="#">New window</a>
+                    <button type="button" class="btn-close-a4" data-close-a4 aria-label="Close preview">&times;</button>
+                </div>
+            </div>
+            <div class="a4-modal-body">
+                <iframe class="a4-preview-iframe" src="about:blank" title="A4 Document Preview"></iframe>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+
+        // Close button trigger
+        dialog.querySelector('[data-close-a4]').addEventListener('click', (e) => {
+            e.preventDefault();
+            closeA4PreviewModal();
+        });
+
+        // Print button trigger
+        dialog.querySelector('[data-print-a4]').addEventListener('click', () => {
+            const iframe = dialog.querySelector('.a4-preview-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            }
+        });
+
+        // Backdrop click dismisses modal
+        dialog.addEventListener('click', (e) => {
+            const rect = dialog.getBoundingClientRect();
+            const isInDialog = (
+                rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+                rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+            );
+            if (!isInDialog || e.target === dialog) {
+                closeA4PreviewModal();
+            }
+        });
+
+        dialog.addEventListener('cancel', (e) => {
+            e.preventDefault();
+            closeA4PreviewModal();
+        });
+
+        dialog.addEventListener('close', () => {
+            closeA4PreviewModal();
+        });
+    }
+
+    const modalUrl = url.includes('modal=1') ? url : (url + (url.includes('?') ? '&' : '?') + 'modal=1');
+    const externalUrl = url.replace(/([?&])modal=1(&|$)/, '$1').replace(/[?&]$/, '');
+    dialog.querySelector('.a4-preview-iframe').src = modalUrl;
+    dialog.querySelector('[data-a4-external]').href = externalUrl;
+
+    dialog.style.removeProperty('display');
+    if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+    } else {
+        dialog.setAttribute('open', '');
+        dialog.style.display = 'flex';
+    }
+}
+
+// Global escape key handler to dismiss modal
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const dialog = document.getElementById('a4-preview-dialog');
+        if (dialog && (dialog.open || dialog.style.display !== 'none')) {
+            closeA4PreviewModal();
+        }
+    }
 });
+
+document.querySelectorAll('[data-a4-preview], .a4-preview-btn, .a4-preview-btn-top').forEach(btn => {
+    btn.addEventListener('click', e => {
+        e.preventDefault();
+        const url = btn.dataset.a4Preview || btn.getAttribute('href');
+        if (url && url !== '#') {
+            openA4PreviewModal(url);
+        }
+    });
+});
+
+// Precision digital signature canvas
+document.querySelectorAll('[data-signature]').forEach(canvas => {
+    const ctx = canvas.getContext('2d');
+    const input = document.getElementById(canvas.dataset.signature);
+    const clear = canvas.parentElement.querySelector('[data-clear]');
+    let drawing = false, last = null;
+
+    const calibrateCanvas = () => {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width && rect.height) {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+            ctx.scale(ratio, ratio);
+            ctx.strokeStyle = '#18442e';
+            ctx.lineWidth = 2.4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+    };
+
+    setTimeout(calibrateCanvas, 60);
+    window.addEventListener('resize', calibrateCanvas);
+
+    const point = e => {
+        const r = canvas.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return [t.clientX - r.left, t.clientY - r.top];
+    };
+
+    const start = e => {
+        drawing = true;
+        last = point(e);
+        e.preventDefault();
+    };
+
+    const move = e => {
+        if (!drawing) return;
+        const p = point(e);
+        ctx.beginPath();
+        ctx.moveTo(...last);
+        ctx.lineTo(...p);
+        ctx.stroke();
+        last = p;
+        if (input) input.value = canvas.toDataURL('image/png');
+        e.preventDefault();
+    };
+
+    const end = () => {
+        drawing = false;
+    };
+
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+
+    clear?.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (input) input.value = '';
+    });
+
+    const form = canvas.closest('form');
+    if (form) {
+        form.addEventListener('submit', e => {
+            if (input && !input.value) {
+                e.preventDefault();
+                alert('Please sign inside the signature box before submitting.');
+            }
+        });
+    }
+});
+
+// Guarantee all form submissions (programmatic or native) disable unsaved changes prompts
+const originalFormSubmit = HTMLFormElement.prototype.submit;
+HTMLFormElement.prototype.submit = function() {
+    allowWaiverNavigation = true;
+    return originalFormSubmit.apply(this, arguments);
+};
+if (HTMLFormElement.prototype.requestSubmit) {
+    const originalRequestSubmit = HTMLFormElement.prototype.requestSubmit;
+    HTMLFormElement.prototype.requestSubmit = function() {
+        allowWaiverNavigation = true;
+        return originalRequestSubmit.apply(this, arguments);
+    };
+}
+
+// Intercept legitimate form submissions and forward progression in capture phase
+document.addEventListener('submit', () => {
+    allowWaiverNavigation = true;
+}, true);
+
+document.addEventListener('click', (event) => {
+    // Any submit button, forward action, or completion button grants navigation permission
+    const forwardTrigger = event.target.closest('button[type="submit"], input[type="submit"], .btn-nav-primary, .footer-nav-right a, .footer-nav-right button, [data-employee-continue], [data-type-continue], [data-review-submit], [data-forward]');
+    if (forwardTrigger) {
+        allowWaiverNavigation = true;
+    }
+}, true);
+
+// If form validation fails, re-arm the route guard
+document.addEventListener('invalid', () => {
+    allowWaiverNavigation = false;
+}, true);
 
 // Poll the authenticated status endpoint while a one-time QR is active.
 document.querySelectorAll('[data-signing-waiting]').forEach(panel=>{
- const waiverId=panel.dataset.waiverId,expiresAt=Date.now()+Number(panel.dataset.secondsRemaining||0)*1000,countdown=panel.querySelector('[data-signing-countdown]');
+ const waiverId=panel.dataset.waiverId;
+ const totalSeconds=Number(panel.dataset.totalSeconds||600);
+ const expiresAt=Date.now()+Number(panel.dataset.secondsRemaining||0)*1000;
+ const countdown=panel.querySelector('[data-signing-countdown]');
+ const progressBar=panel.querySelector('#signing-progress-bar');
  let stopped=false,lastSeconds=null;
- const showSigned=data=>{
+
+ // Incoming signature ingestion: Suppress beforeunload and reload smoothly
+ const showSigned=()=>{
   stopped=true;
-  const canSupervise=panel.dataset.canSupervise==='1';
-  panel.classList.add('signed-state');panel.dataset.signingState='signed';panel.removeAttribute('data-signing-waiting');
-  panel.innerHTML='<div class="signed-icon">&#10003;</div><div class="signed-copy"><p class="signing-kicker">Employee signature</p><h2>Employee signed</h2><p data-signed-name></p><img data-signed-image alt="Employee signature"><dl><div><dt>Signed</dt><dd data-signed-at></dd></div><div><dt>Verification</dt><dd>Company credentials</dd></div></dl><div class="next-step"><b>Next step</b><span>Supervisor acknowledgment required</span><a class="btn" data-next-action></a></div></div>';
-  panel.querySelector('[data-signed-name]').textContent=data.printed_name||'Employee';
-  panel.querySelector('[data-signed-at]').textContent=(data.signed_at||'Recorded').replace(/\.\d+$/,'');
-  const image=panel.querySelector('[data-signed-image]');if(typeof data.signature_data==='string'&&data.signature_data.startsWith('data:image/png;base64,'))image.src=data.signature_data;
-  const next=panel.querySelector('[data-next-action]');next.href=canSupervise?`index.php?page=approval-sign&id=${encodeURIComponent(waiverId)}`:`index.php?page=waiver-view&id=${encodeURIComponent(waiverId)}`;next.textContent=canSupervise?'Review for Supervisor':'View signed waiver';if(!canSupervise)next.classList.add('secondary');
+  allowWaiverNavigation=true;
+  location.reload();
  };
- const tick=()=>{if(stopped)return;const seconds=Math.max(0,Math.floor((expiresAt-Date.now())/1000));if(seconds!==lastSeconds&&countdown){countdown.textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;lastSeconds=seconds}if(seconds<=0){stopped=true;location.reload()}};
- const poll=async()=>{if(stopped)return;try{const response=await fetch(`/Waiver-Liability/api/waivers/check-signature-status.php?waiver_id=${encodeURIComponent(waiverId)}`,{credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});if(response.status===401){stopped=true;location.href='index.php?page=login';return}if(!response.ok)return;const data=await response.json();if(data.signed){showSigned(data);return}if(data.request_status&&data.request_status!=='ACTIVE'){stopped=true;location.reload()}}catch(error){/* Keep waiting through short network interruptions. */}};
- tick();poll();const clock=setInterval(tick,1000),watch=setInterval(poll,2500);window.addEventListener('pagehide',()=>{clearInterval(clock);clearInterval(watch)},{once:true});
+
+ const tick=()=>{
+  if(stopped)return;
+  const seconds=Math.max(0,Math.floor((expiresAt-Date.now())/1000));
+  if(seconds!==lastSeconds&&countdown){
+   countdown.textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
+   if(progressBar&&totalSeconds>0){
+    const pct=Math.max(0,Math.min(100,(seconds/totalSeconds)*100));
+    progressBar.style.width=`${pct}%`;
+   }
+   lastSeconds=seconds;
+  }
+  if(seconds<=0){
+   stopped=true;
+   allowWaiverNavigation=true;
+   location.reload();
+  }
+ };
+
+ const poll=async()=>{
+  if(stopped)return;
+  try{
+   const response=await fetch(`/Waiver-Liability/api/waivers/check-signature-status.php?waiver_id=${encodeURIComponent(waiverId)}`,{credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});
+   if(response.status===401){
+    stopped=true;
+    allowWaiverNavigation=true;
+    location.href='index.php?page=login';
+    return;
+   }
+   if(!response.ok)return;
+   const data=await response.json();
+   if(data.signed){
+    showSigned(data);
+    return;
+   }
+   if(data.request_status&&data.request_status!=='ACTIVE'){
+    stopped=true;
+    allowWaiverNavigation=true;
+    location.reload();
+   }
+  }catch(error){/* Keep waiting through short network interruptions. */}
+ };
+
+ tick();
+ poll();
+ const clock=setInterval(tick,1000),watch=setInterval(poll,2500);
+ window.addEventListener('pagehide',()=>{clearInterval(clock);clearInterval(watch)},{once:true});
 });
 
-// Protect active waiver sessions. Saved DRAFT and employee-signature states
-// remain resumable from the waiver register.
+// Protect active waiver sessions. Restrict confirmation strictly to intentional exit actions:
+// navigating backwards, clicking external links, or explicitly discarding draft.
 const waiverSession=document.querySelector('[data-waiver-session]');
 if(waiverSession){
- let allowNavigation=false,pendingUrl='';
+ let pendingUrl='';
  const dialog=document.createElement('dialog');
  dialog.className='route-guard';
  dialog.innerHTML='<div class="route-guard-icon">!</div><h2>Leave this waiver?</h2><p>All progress will be lost if you leave this active waiver session.</p><div class="route-guard-actions"><button type="button" class="btn secondary" data-stay>Stay here</button><button type="button" class="btn danger" data-leave>Leave page</button></div>';
  document.body.appendChild(dialog);
- document.querySelectorAll('form').forEach(form=>form.addEventListener('submit',()=>{allowNavigation=true}));
- window.addEventListener('beforeunload',event=>{if(allowNavigation)return;event.preventDefault();event.returnValue=''});
- document.querySelectorAll('.sidebar a, .topbar a, a[data-leave-workflow]').forEach(link=>link.addEventListener('click',event=>{
-  if(allowNavigation||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||link.closest('.new-waiver-page'))return;
-  event.preventDefault();pendingUrl=link.href;
-  if(typeof dialog.showModal==='function')dialog.showModal();
-  else if(window.confirm('All progress will be lost if you leave this active waiver session.')){allowNavigation=true;location.href=pendingUrl}
- }));
+
+ // Native browser prompt: ONLY warn if navigation is NOT explicitly authorized
+ window.addEventListener('beforeunload',event=>{
+  if(allowWaiverNavigation)return;
+  event.preventDefault();
+  event.returnValue='';
+ });
+
+ document.addEventListener('click',event=>{
+  if(allowWaiverNavigation||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+
+  // Never intercept forward progression, submit buttons, modals, or right footer controls
+  if(event.target.closest('button[type="submit"], input[type="submit"], .btn-nav-primary, .footer-nav-right, [data-forward], [data-stay], [data-leave], .app-modal, .route-guard')) {
+   return;
+  }
+
+  // Strict exit triggers: Back navigation, change employee, sidebar links, topbar links
+  const leaveTrigger=event.target.closest('.sidebar a, .topbar a, a[data-leave-workflow], [data-confirm-back], .footer-nav-left a, a.change-emp-btn');
+  if(!leaveTrigger||!leaveTrigger.href)return;
+  const href=leaveTrigger.getAttribute('href')||'';
+  if(href.startsWith('#')||href.startsWith('javascript:'))return;
+
+  event.preventDefault();
+  pendingUrl=leaveTrigger.href;
+  if(typeof dialog.showModal==='function'){
+      dialog.showModal();
+  }else{
+      allowWaiverNavigation=true;
+      location.href=pendingUrl;
+  }
+ });
+
  dialog.querySelector('[data-stay]').addEventListener('click',()=>{pendingUrl='';dialog.close()});
- dialog.querySelector('[data-leave]').addEventListener('click',()=>{allowNavigation=true;dialog.close();location.href=pendingUrl});
+ dialog.querySelector('[data-leave]').addEventListener('click',()=>{allowWaiverNavigation=true;dialog.close();location.href=pendingUrl});
  dialog.addEventListener('cancel',event=>{event.preventDefault();pendingUrl='';dialog.close()});
+ dialog.addEventListener('click',event=>{if(event.target===dialog){pendingUrl='';dialog.close()}});
 }
 
 // Move server-side report filters into the table card so search and category
