@@ -5,7 +5,7 @@ const MW_CAPABILITIES = [
     'SYSTEM ADMIN'=>['*'],
     'CLINIC NURSE'=>['visits.manage','waivers.facilitate'],
     'SUPERVISOR'=>['waivers.acknowledge'],
-    'HR / CLINIC ADMIN'=>['waivers.report','templates.manage'],
+    'HR / CLINIC ADMIN'=>['waivers.report'],
     'EMPLOYEE'=>['waivers.sign-own'],
 ];
 
