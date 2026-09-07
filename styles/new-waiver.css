@@ -903,27 +903,32 @@ body.page-approval-sign {
 
 .type-card {
     position: relative;
-    border: 1px solid #dce3dc;
+    border: 2px solid #dce3dc;
     border-radius: 12px;
     padding: 16px 18px;
     background: #fff;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    transition: all .15s ease;
+    transform: none !important;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
 }
 
 .type-card:hover {
     border-color: #92b89a;
     background: #fbfdfa;
+    transform: none !important;
 }
 
 .type-card.is-selected,
 .type-card:has(input:checked) {
-    border: 2px solid #187b4a;
+    border-color: #187b4a;
     background: #fafdfa;
     box-shadow: 0 0 0 3px #e5f2e1;
-    padding: 15px 17px;
+    padding: 16px 18px;
+    transform: none !important;
 }
 
 .type-card input {
@@ -954,21 +959,37 @@ body.page-approval-sign {
     font: 700 15.5px Manrope, sans-serif;
     color: #14291f;
     margin: 10px 0 4px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .type-card p {
     font-size: 12.5px;
     color: #526358;
-    line-height: 1.4;
+    line-height: 1.45;
     margin: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.type-card-divider {
+    height: 1px;
+    background: #eef2ec;
+    margin: 12px 0 10px;
+    width: 100%;
 }
 
 .type-feature-list {
     list-style: none;
-    margin: 8px 0 0;
+    margin: 0;
     padding: 0;
     display: grid;
     gap: 5px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .type-feature-list li {

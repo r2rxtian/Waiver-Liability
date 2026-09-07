@@ -294,7 +294,8 @@ if(typeForm){
     const typeCards=typeForm.querySelectorAll('[data-type-card]');
 
     typeCards.forEach(card=>{
-        card.addEventListener('click',()=>{
+        card.addEventListener('click',(event)=>{
+            if(event.target && event.target.tagName === 'INPUT') return;
             const radio=card.querySelector('input[type="radio"]');
             if(radio)radio.checked=true;
             typeCards.forEach(c=>c.classList.toggle('is-selected',c===card));
