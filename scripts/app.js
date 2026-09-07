@@ -5,6 +5,100 @@ document.querySelectorAll('dialog[data-auto-open]').forEach(dialog=>{
     if(typeof dialog.showModal==='function')dialog.showModal();
 });
 
+// Toast notification manager (auto-dismiss, pause-on-hover, close button, programmatic showToast)
+(function initToastSystem(){
+    function setupToast(toastEl, duration = 4000) {
+        if (!toastEl || toastEl.dataset.toastInit) return;
+        toastEl.dataset.toastInit = '1';
+        const closeBtn = toastEl.querySelector('.toast-close');
+        let timer = null;
+        let startTime = Date.now();
+        let remaining = duration;
+
+        function hide() {
+            if (timer) clearTimeout(timer);
+            toastEl.classList.add('toast-hiding');
+            setTimeout(() => {
+                const container = toastEl.closest('.app-toast-container');
+                toastEl.remove();
+                if (container && container.children.length === 0) {
+                    container.remove();
+                }
+            }, 300);
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timer = setTimeout(hide, remaining);
+        }
+
+        function pauseTimer() {
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+            remaining -= (Date.now() - startTime);
+            if (remaining < 500) remaining = 500;
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hide();
+            });
+        }
+
+        toastEl.addEventListener('mouseenter', pauseTimer);
+        toastEl.addEventListener('mouseleave', startTimer);
+
+        startTimer();
+    }
+
+    document.querySelectorAll('.app-toast').forEach(toast => setupToast(toast, 4000));
+
+    window.showToast = function(message, type = 'success', duration = 4000) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'app-toast-container';
+            container.setAttribute('aria-live', 'polite');
+            container.setAttribute('aria-atomic', 'true');
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `app-toast toast-${type}`;
+        toast.setAttribute('role', 'status');
+
+        const titleText = type === 'error' ? 'Notice' : (type === 'info' ? 'Information' : 'Success');
+        const iconSvg = type === 'error'
+            ? '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="6" x2="10" y2="11"></line><line x1="10" y1="14" x2="10.01" y2="14"></line></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 10.5 8.5 15 16 6"></polyline></svg>';
+
+        toast.innerHTML = `
+            <div class="toast-icon-wrap" aria-hidden="true">${iconSvg}</div>
+            <div class="toast-content">
+                <div class="toast-title">${titleText}</div>
+                <div class="toast-message"></div>
+            </div>
+            <button type="button" class="toast-close" aria-label="Dismiss notification" title="Close notification">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="2" y1="2" x2="12" y2="12"></line>
+                    <line x1="12" y1="2" x2="2" y2="12"></line>
+                </svg>
+            </button>
+            <div class="toast-progress" aria-hidden="true">
+                <div class="toast-progress-bar" style="animation-duration: ${duration}ms"></div>
+            </div>
+        `;
+        toast.querySelector('.toast-message').textContent = message;
+        container.appendChild(toast);
+        setupToast(toast, duration);
+    };
+})();
+
+
 // Universal modal dialog for confirmations (replacing native window.confirm)
 const confirmModal=document.createElement('dialog');
 confirmModal.className='app-modal confirm-modal';
@@ -600,11 +694,16 @@ document.querySelectorAll('.content table').forEach((table,index)=>{
  const fixedPageSize=host.classList.contains('recent-waivers')?5:null;
  const scroller=document.createElement('div');scroller.className='table-scroll';
  table.parentNode.insertBefore(scroller,table);scroller.appendChild(table);
+ const ths=[...table.querySelectorAll('thead th')];
+ let statusCol=ths.findIndex(th=>th.textContent.trim().toLowerCase()==='status');
+ let typeCol=ths.findIndex(th=>th.textContent.trim().toLowerCase().includes('type'));
+ if(statusCol===-1)statusCol=4;
+ if(typeCol===-1)typeCol=3;
  let toolbar=host.querySelector('.server-table-toolbar');
  const serverFiltered=Boolean(toolbar);
  if(!toolbar){
   toolbar=document.createElement('div');toolbar.className='table-toolbar';
-  toolbar.innerHTML='<label class="table-search"><span>Search</span><input type="search" placeholder="Search waivers by employee, department, or type..." data-table-search></label><label><span>Status</span><select data-table-filter data-column="4"><option value="">All statuses</option></select></label><label><span>Waiver type</span><select data-table-filter data-column="3"><option value="">All types</option></select></label>';
+  toolbar.innerHTML=`<label class="table-search"><span>Search</span><input type="search" placeholder="Search waivers by employee, department, or type..." data-table-search></label><label><span>Status</span><select data-table-filter data-column="${statusCol}"><option value="">All statuses</option></select></label><label><span>Waiver type</span><select data-table-filter data-column="${typeCol}"><option value="">All types</option></select></label>`;
   scroller.insertAdjacentElement('beforebegin',toolbar);
  }
  if(fixedPageSize===null){const sizeLabel=document.createElement('label');sizeLabel.className='page-size-field';sizeLabel.innerHTML='<span>Rows</span><select data-page-size><option>5</option><option selected>10</option><option>20</option><option>50</option></select>';toolbar.appendChild(sizeLabel)}
@@ -622,9 +721,239 @@ document.querySelectorAll('.content table').forEach((table,index)=>{
   numbers.innerHTML='';const first=Math.max(1,page-2),last=Math.min(pages,first+4);for(let n=first;n<=last;n++){const button=document.createElement('button');button.type='button';button.className='page-button'+(n===page?' active':'');button.textContent=n;button.setAttribute('aria-label',`Page ${n}`);button.addEventListener('click',()=>{page=n;render()});numbers.appendChild(button)}
   prev.disabled=page===1;next.disabled=page===pages;
  };
- search?.addEventListener('input',()=>{page=1;render()});filters.forEach(filter=>filter.addEventListener('change',()=>{page=1;render()}));host.querySelectorAll('[data-quick-status]').forEach(button=>button.addEventListener('click',()=>{const status=filters.find(filter=>filter.dataset.column==='4');if(status){status.value=button.dataset.quickStatus;page=1;render()}host.querySelectorAll('[data-quick-status]').forEach(item=>item.classList.toggle('active',item===button))}));size?.addEventListener('change',()=>{page=1;render()});prev.addEventListener('click',()=>{if(page>1){page--;render()}});next.addEventListener('click',()=>{const pages=Math.max(1,Math.ceil(matching().length/pageSize()));if(page<pages){page++;render()}});render();
+ search?.addEventListener('input',()=>{page=1;render()});filters.forEach(filter=>filter.addEventListener('change',()=>{page=1;render()}));host.querySelectorAll('[data-quick-status]').forEach(button=>button.addEventListener('click',()=>{const status=filters.find(filter=>Number(filter.dataset.column)===statusCol);if(status){status.value=button.dataset.quickStatus;page=1;render()}host.querySelectorAll('[data-quick-status]').forEach(item=>item.classList.toggle('active',item===button))}));size?.addEventListener('change',()=>{page=1;render()});prev.addEventListener('click',()=>{if(page>1){page--;render()}});next.addEventListener('click',()=>{const pages=Math.max(1,Math.ceil(matching().length/pageSize()));if(page<pages){page++;render()}});render();
 });
 
 // Login controls: reveal the password on demand and remember only the username.
 document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{const input=button.closest('.auth-input')?.querySelector('input');if(!input)return;const showing=input.type==='text';input.type=showing?'password':'text';button.setAttribute('aria-pressed',String(!showing));button.setAttribute('aria-label',showing?'Show password':'Hide password')}));
 document.querySelectorAll('[data-login-form]').forEach(form=>{const username=form.querySelector('input[name="username"]'),remember=form.querySelector('[data-remember-username]');if(!username||!remember)return;const saved=localStorage.getItem('waiverDeskUsername');if(saved&&!username.value){username.value=saved;remember.checked=true}form.addEventListener('submit',()=>{if(remember.checked)localStorage.setItem('waiverDeskUsername',username.value);else localStorage.removeItem('waiverDeskUsername')})});
+
+// Admin Delete Waiver Confirmation Modal
+document.addEventListener('click', event => {
+ const trigger = event.target.closest('.btn-delete-waiver');
+ if (!trigger) return;
+ event.preventDefault();
+
+ const modal = document.getElementById('delete-waiver-modal');
+ const idInput = document.getElementById('delete-waiver-id');
+ const msgEl = document.getElementById('delete-waiver-message');
+ if (!modal || !idInput) return;
+
+ const waiverId = trigger.getAttribute('data-waiver-id') || '';
+ const waiverNumber = trigger.getAttribute('data-waiver-number') || 'Draft';
+ const employeeName = trigger.getAttribute('data-employee-name') || 'this employee';
+
+ idInput.value = waiverId;
+ if (msgEl) {
+  const numSpan = document.createElement('strong');
+  numSpan.textContent = waiverNumber;
+  const nameSpan = document.createElement('strong');
+  nameSpan.textContent = employeeName;
+
+  msgEl.textContent = 'Are you sure you want to permanently delete ';
+  msgEl.appendChild(numSpan);
+  msgEl.appendChild(document.createTextNode(' for '));
+  msgEl.appendChild(nameSpan);
+  msgEl.appendChild(document.createElement('br'));
+  msgEl.appendChild(document.createElement('br'));
+  msgEl.appendChild(document.createTextNode('All associated signatures, acknowledgments, and mobile signing tokens will be removed. This action cannot be undone.'));
+ }
+
+ if (typeof modal.showModal === 'function') {
+  modal.showModal();
+ }
+});
+
+const deleteModal = document.getElementById('delete-waiver-modal');
+if (deleteModal) {
+ deleteModal.addEventListener('click', event => {
+  if (event.target === deleteModal) deleteModal.close();
+ });
+}
+
+const deleteForm = document.getElementById('delete-waiver-form');
+if (deleteForm) {
+ deleteForm.addEventListener('submit', () => {
+  if (typeof allowWaiverNavigation !== 'undefined') {
+   allowWaiverNavigation = true;
+  }
+ });
+}
+
+// Bulk Selection & Delete All / Delete Selected for Admin
+(function initBulkDeleteWaivers() {
+ document.addEventListener('change', event => {
+  if (event.target.matches('[data-select-all-waivers]')) {
+   const table = event.target.closest('table');
+   if (!table) return;
+   const shouldCheck = event.target.checked;
+   table.querySelectorAll('[data-waiver-checkbox]').forEach(cb => {
+    cb.checked = shouldCheck;
+   });
+   updateBulkState(table);
+  } else if (event.target.matches('[data-waiver-checkbox]')) {
+   const table = event.target.closest('table');
+   if (!table) return;
+   updateBulkState(table);
+  }
+ });
+
+ function updateBulkState(table) {
+  const host = table.closest('.card') || table.parentElement;
+  const toolbar = host.querySelector('[data-bulk-toolbar]');
+  const selectAll = table.querySelector('[data-select-all-waivers]');
+  const checkboxes = [...table.querySelectorAll('[data-waiver-checkbox]')];
+  const checked = checkboxes.filter(cb => cb.checked);
+  const count = checked.length;
+  const total = checkboxes.length;
+
+  checkboxes.forEach(cb => {
+   const row = cb.closest('tr');
+   if (row) row.classList.toggle('row-selected', cb.checked);
+  });
+
+  if (selectAll) {
+   if (count === 0) {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+   } else if (count === total) {
+    selectAll.checked = true;
+    selectAll.indeterminate = false;
+   } else {
+    selectAll.checked = false;
+    selectAll.indeterminate = true;
+   }
+  }
+
+  if (toolbar) {
+   if (count > 0) {
+    toolbar.style.display = 'flex';
+    const countEl = toolbar.querySelector('[data-selected-count]');
+    const subtextEl = toolbar.querySelector('[data-bulk-subtext]');
+    const deleteTextEl = toolbar.querySelector('[data-bulk-delete-text]');
+    if (countEl) countEl.textContent = count;
+    const isAll = count === total;
+    if (subtextEl) {
+     subtextEl.textContent = isAll ? `All ${total} waivers selected` : `${count} of ${total} waivers selected`;
+    }
+    if (deleteTextEl) {
+     deleteTextEl.textContent = isAll ? `Delete all (${total})` : `Delete selected (${count})`;
+    }
+   } else {
+    toolbar.style.display = 'none';
+   }
+  }
+ }
+
+ document.addEventListener('click', event => {
+  const deselectBtn = event.target.closest('[data-bulk-deselect]');
+  if (deselectBtn) {
+   const host = deselectBtn.closest('.card') || document;
+   const table = host.querySelector('[data-waivers-table]');
+   if (!table) return;
+   table.querySelectorAll('[data-waiver-checkbox]').forEach(cb => { cb.checked = false; });
+   updateBulkState(table);
+   return;
+  }
+
+  const deleteBtn = event.target.closest('[data-bulk-delete]');
+  if (deleteBtn) {
+   const host = deleteBtn.closest('.card') || document;
+   const table = host.querySelector('[data-waivers-table]');
+   if (!table) return;
+   const checkboxes = [...table.querySelectorAll('[data-waiver-checkbox]')];
+   const checked = checkboxes.filter(cb => cb.checked);
+   if (checked.length === 0) return;
+
+   const modal = document.getElementById('bulk-delete-waiver-modal');
+   const titleEl = document.getElementById('bulk-delete-modal-title');
+   const msgEl = document.getElementById('bulk-delete-modal-message');
+   const previewEl = document.getElementById('bulk-delete-preview');
+   const inputsEl = document.getElementById('bulk-delete-hidden-inputs');
+   const confirmBtn = document.getElementById('bulk-delete-confirm-btn');
+   if (!modal || !inputsEl) return;
+
+   const isAll = checked.length === checkboxes.length;
+   const count = checked.length;
+
+   if (titleEl) {
+    titleEl.textContent = isAll ? `Delete all ${count} waivers?` : `Delete ${count} selected waivers?`;
+   }
+
+   if (msgEl) {
+    const strongCount = document.createElement('strong');
+    strongCount.textContent = isAll ? `all ${count} waivers` : `${count} selected waivers`;
+    msgEl.textContent = 'Are you sure you want to permanently delete ';
+    msgEl.appendChild(strongCount);
+    msgEl.appendChild(document.createTextNode('? All associated signatures, acknowledgments, and mobile signing tokens will be removed. This action cannot be undone.'));
+   }
+
+   if (previewEl) {
+    previewEl.innerHTML = '';
+    const previewHeader = document.createElement('div');
+    previewHeader.style.marginBottom = '6px';
+    previewHeader.style.fontWeight = '600';
+    previewHeader.textContent = `Waivers to be deleted (${count}):`;
+    previewEl.appendChild(previewHeader);
+
+    const listWrap = document.createElement('div');
+    listWrap.style.display = 'flex';
+    listWrap.style.flexWrap = 'wrap';
+    listWrap.style.gap = '4px';
+
+    checked.slice(0, 30).forEach(cb => {
+     const tag = document.createElement('span');
+     tag.className = 'bulk-preview-item';
+     const num = cb.getAttribute('data-waiver-number') || `Draft #${cb.value}`;
+     const emp = cb.getAttribute('data-employee-name') || '';
+     tag.textContent = emp ? `${num} (${emp})` : num;
+     listWrap.appendChild(tag);
+    });
+
+    if (count > 30) {
+     const more = document.createElement('span');
+     more.className = 'bulk-preview-item';
+     more.style.background = '#f0f4f1';
+     more.textContent = `+${count - 30} more`;
+     listWrap.appendChild(more);
+    }
+    previewEl.appendChild(listWrap);
+   }
+
+   inputsEl.innerHTML = '';
+   checked.forEach(cb => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'waiver_ids[]';
+    input.value = cb.value;
+    inputsEl.appendChild(input);
+   });
+
+   if (confirmBtn) {
+    confirmBtn.textContent = isAll ? `Yes, delete all (${count})` : `Yes, delete ${count} waivers`;
+   }
+
+   if (typeof modal.showModal === 'function') {
+    modal.showModal();
+   }
+  }
+ });
+
+ const bulkModal = document.getElementById('bulk-delete-waiver-modal');
+ if (bulkModal) {
+  bulkModal.addEventListener('click', event => {
+   if (event.target === bulkModal) bulkModal.close();
+  });
+ }
+
+ const bulkForm = document.getElementById('bulk-delete-waiver-form');
+ if (bulkForm) {
+  bulkForm.addEventListener('submit', () => {
+   if (typeof allowWaiverNavigation !== 'undefined') {
+    allowWaiverNavigation = true;
+   }
+  });
+ }
+})();
+
+
